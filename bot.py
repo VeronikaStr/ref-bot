@@ -168,9 +168,11 @@ async def cmd_start(message: types.Message):
         reply_markup=kb
     )
 
-# ----- ОБРАБОТЧИКИ ИГР (УПРОЩЁННЫЕ, РАБОЧИЕ) -----
+# ----- ОБРАБОТЧИКИ ИГР (ПРАВИЛЬНЫЙ ПОРЯДОК) -----
 @dp.callback_query(F.data == "game_hoop")
 async def game_hoop(callback: CallbackQuery):
+    # Сначала отвечаем на callback, чтобы убрать "часики"
+    await callback.answer()
     try:
         user_id = callback.from_user.id
         user = get_user(user_id)
@@ -190,13 +192,13 @@ async def game_hoop(callback: CallbackQuery):
             await callback.message.answer(
                 "😅 <b>Промах!</b> Попробуй ещё раз."
             )
-        await callback.answer()
     except Exception as e:
         logger.error(f"Ошибка в game_hoop: {e}")
-        await callback.answer("Ошибка, попробуй позже", show_alert=True)
+        await callback.message.answer("Произошла ошибка, но мы уже работаем над ней.")
 
 @dp.callback_query(F.data == "game_dart")
 async def game_dart(callback: CallbackQuery):
+    await callback.answer()
     try:
         user_id = callback.from_user.id
         user = get_user(user_id)
@@ -215,10 +217,9 @@ async def game_dart(callback: CallbackQuery):
             await callback.message.answer(
                 "😅 <b>Промах!</b> Попробуй ещё раз."
             )
-        await callback.answer()
     except Exception as e:
         logger.error(f"Ошибка в game_dart: {e}")
-        await callback.answer("Ошибка, попробуй позже", show_alert=True)
+        await callback.message.answer("Произошла ошибка, но мы уже работаем над ней.")
 
 async def show_game_menu(message: types.Message):
     """Меню после успешной игры"""
@@ -233,6 +234,7 @@ async def show_game_menu(message: types.Message):
 
 @dp.callback_query(F.data == "play_again")
 async def play_again(callback: CallbackQuery):
+    await callback.answer()
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏀 Бросок в кольцо", callback_data="game_hoop")],
         [InlineKeyboardButton(text="🎯 Бросок в цель", callback_data="game_dart")],
@@ -242,18 +244,18 @@ async def play_again(callback: CallbackQuery):
         "Выберите игру:",
         reply_markup=kb
     )
-    await callback.answer()
 
 # ----- ОТКРЫТИЕ КЕЙСА -----
 @dp.callback_query(F.data == "open_case")
 async def open_case(callback: CallbackQuery):
+    await callback.answer()
     user_id = callback.from_user.id
     user = get_user(user_id)
     today = date.today().isoformat()
     last = user[3]
 
     if last == today:
-        await callback.answer("Ты уже открывал кейс сегодня. Приходи завтра!", show_alert=True)
+        await callback.message.answer("Ты уже открывал кейс сегодня. Приходи завтра!")
         return
 
     prize = random.randint(10, 100)
@@ -264,11 +266,11 @@ async def open_case(callback: CallbackQuery):
         f"🎉 Ты открыл кейс и получил <b>{prize} звёзд</b>!\n"
         f"💰 Твой баланс: {user[2] + prize} звёзд."
     )
-    await callback.answer()
 
 # ----- ЗАДАНИЯ -----
 @dp.callback_query(F.data == "tasks_list")
 async def tasks_list(callback: CallbackQuery):
+    await callback.answer()
     user_id = callback.from_user.id
     kb_buttons = []
     for task_id, task in TASKS.items():
@@ -282,18 +284,18 @@ async def tasks_list(callback: CallbackQuery):
     kb_buttons.append([InlineKeyboardButton(text="◀ Назад", callback_data="back_to_menu")])
     kb = InlineKeyboardMarkup(inline_keyboard=kb_buttons)
     await callback.message.edit_text("📋 <b>Доступные задания:</b>", reply_markup=kb)
-    await callback.answer()
 
 @dp.callback_query(F.data.startswith("task_"))
 async def task_detail(callback: CallbackQuery):
+    await callback.answer()
     task_id = callback.data.replace("task_", "")
     task = TASKS.get(task_id)
     if not task:
-        await callback.answer("Ошибка")
+        await callback.message.answer("Ошибка")
         return
 
     if is_task_completed(callback.from_user.id, task_id):
-        await callback.answer("Уже выполнено!", show_alert=True)
+        await callback.message.answer("Ты уже выполнил это задание!")
         return
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -304,27 +306,26 @@ async def task_detail(callback: CallbackQuery):
         f"<b>{task['name']}</b>\n\n{task['description']}\n\nНаграда: {task['reward']} ⭐",
         reply_markup=kb
     )
-    await callback.answer()
 
 @dp.callback_query(F.data.startswith("done_"))
 async def task_done(callback: CallbackQuery):
+    await callback.answer()
     task_id = callback.data.replace("done_", "")
     task = TASKS.get(task_id)
     user_id = callback.from_user.id
 
     if is_task_completed(user_id, task_id):
-        await callback.answer("Уже выполнено!", show_alert=True)
+        await callback.message.answer("Уже выполнено!")
         return
 
     if get_pending_task(user_id):
-        await callback.answer("Сначала отправь скриншот для предыдущего задания!", show_alert=True)
+        await callback.message.answer("Сначала отправь скриншот для предыдущего задания!")
         return
 
     set_pending_task(user_id, task_id)
     await callback.message.edit_text(
         f"📸 Отправь скриншот выполнения задания «{task['name']}»."
     )
-    await callback.answer()
 
 # ----- ОБРАБОТКА СКРИНШОТОВ -----
 @dp.message(F.photo)
@@ -354,6 +355,7 @@ async def handle_screenshot(message: types.Message):
 # ----- БАЛАНС -----
 @dp.callback_query(F.data == "balance")
 async def show_balance(callback: CallbackQuery):
+    await callback.answer()
     user = get_user(callback.from_user.id)
     await callback.message.edit_text(
         f"💰 Баланс: {user[2]} ⭐\n📦 Кейсов: {user[4]}",
@@ -361,11 +363,11 @@ async def show_balance(callback: CallbackQuery):
             [InlineKeyboardButton(text="◀ Назад", callback_data="back_to_menu")]
         ])
     )
-    await callback.answer()
 
 # ----- ЛИДЕРБОРД -----
 @dp.callback_query(F.data == "leaderboard")
 async def leaderboard(callback: CallbackQuery):
+    await callback.answer()
     top = get_top_users(10)
     if not top:
         text = "Пока нет участников."
@@ -377,13 +379,12 @@ async def leaderboard(callback: CallbackQuery):
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="◀ Назад", callback_data="back_to_menu")]
     ]))
-    await callback.answer()
 
-# ----- КНОПКА НАЗАД (в главное меню) -----
+# ----- КНОПКА НАЗАД (в меню после игры) -----
 @dp.callback_query(F.data == "back_to_menu")
 async def back_to_menu(callback: CallbackQuery):
-    await show_game_menu(callback.message)
     await callback.answer()
+    await show_game_menu(callback.message)
 
 # ----- ВЕБ-СЕРВЕР ДЛЯ RENDER -----
 async def telegram_webhook(request):
