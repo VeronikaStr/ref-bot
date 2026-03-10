@@ -168,10 +168,11 @@ async def cmd_start(message: types.Message):
         reply_markup=kb
     )
 
-# ----- ОБРАБОТЧИКИ ИГР -----
+# ----- ОБРАБОТЧИКИ ИГР С ПОДРОБНЫМИ ЛОГАМИ -----
 @dp.callback_query(F.data == "game_hoop")
 async def game_hoop(callback: CallbackQuery):
-    await callback.answer()  # Сразу отвечаем, чтобы убрать "часики"
+    await callback.answer("Бросок...")  # Всплывающее уведомление для теста
+    logger.info(f"game_hoop triggered by user {callback.from_user.id}")
     try:
         user_id = callback.from_user.id
         user = get_user(user_id)
@@ -180,22 +181,22 @@ async def game_hoop(callback: CallbackQuery):
             prize = random.randint(20, 50)
             add_balance(user_id, prize)
             new_balance = user[2] + prize
-            await callback.message.answer(
-                f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n"
-                f"💰 Твой баланс: {new_balance} ⭐."
-            )
+            text = f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n💰 Твой баланс: {new_balance} ⭐."
+            logger.info(f"Sending success message to user {user_id}")
+            await callback.message.answer(text)
             await show_game_menu(callback.message)
         else:
-            await callback.message.answer(
-                "😅 <b>Промах!</b> Попробуй ещё раз."
-            )
+            text = "😅 <b>Промах!</b> Попробуй ещё раз."
+            logger.info(f"Sending fail message to user {user_id}")
+            await callback.message.answer(text)
     except Exception as e:
         logger.error(f"Ошибка в game_hoop: {e}")
         await callback.message.answer("❌ Ошибка, попробуй позже.")
 
 @dp.callback_query(F.data == "game_dart")
 async def game_dart(callback: CallbackQuery):
-    await callback.answer()
+    await callback.answer("Бросок...")
+    logger.info(f"game_dart triggered by user {callback.from_user.id}")
     try:
         user_id = callback.from_user.id
         user = get_user(user_id)
@@ -204,15 +205,14 @@ async def game_dart(callback: CallbackQuery):
             prize = random.randint(20, 50)
             add_balance(user_id, prize)
             new_balance = user[2] + prize
-            await callback.message.answer(
-                f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n"
-                f"💰 Твой баланс: {new_balance} ⭐."
-            )
+            text = f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n💰 Твой баланс: {new_balance} ⭐."
+            logger.info(f"Sending success message to user {user_id}")
+            await callback.message.answer(text)
             await show_game_menu(callback.message)
         else:
-            await callback.message.answer(
-                "😅 <b>Промах!</b> Попробуй ещё раз."
-            )
+            text = "😅 <b>Промах!</b> Попробуй ещё раз."
+            logger.info(f"Sending fail message to user {user_id}")
+            await callback.message.answer(text)
     except Exception as e:
         logger.error(f"Ошибка в game_dart: {e}")
         await callback.message.answer("❌ Ошибка, попробуй позже.")
