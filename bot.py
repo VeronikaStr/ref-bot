@@ -168,16 +168,14 @@ async def cmd_start(message: types.Message):
         reply_markup=kb
     )
 
-# ----- ОБРАБОТЧИКИ ИГР (ПРАВИЛЬНЫЙ ПОРЯДОК) -----
+# ----- ОБРАБОТЧИКИ ИГР -----
 @dp.callback_query(F.data == "game_hoop")
 async def game_hoop(callback: CallbackQuery):
-    # Сначала отвечаем на callback, чтобы убрать "часики"
-    await callback.answer()
+    await callback.answer()  # Сразу отвечаем, чтобы убрать "часики"
     try:
         user_id = callback.from_user.id
         user = get_user(user_id)
         
-        # Простая логика: 40% успех
         if random.random() < 0.4:
             prize = random.randint(20, 50)
             add_balance(user_id, prize)
@@ -186,7 +184,6 @@ async def game_hoop(callback: CallbackQuery):
                 f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n"
                 f"💰 Твой баланс: {new_balance} ⭐."
             )
-            # Показываем меню после игры
             await show_game_menu(callback.message)
         else:
             await callback.message.answer(
@@ -194,7 +191,7 @@ async def game_hoop(callback: CallbackQuery):
             )
     except Exception as e:
         logger.error(f"Ошибка в game_hoop: {e}")
-        await callback.message.answer("Произошла ошибка, но мы уже работаем над ней.")
+        await callback.message.answer("❌ Ошибка, попробуй позже.")
 
 @dp.callback_query(F.data == "game_dart")
 async def game_dart(callback: CallbackQuery):
@@ -203,7 +200,6 @@ async def game_dart(callback: CallbackQuery):
         user_id = callback.from_user.id
         user = get_user(user_id)
         
-        # 45% успех
         if random.random() < 0.45:
             prize = random.randint(20, 50)
             add_balance(user_id, prize)
@@ -219,7 +215,7 @@ async def game_dart(callback: CallbackQuery):
             )
     except Exception as e:
         logger.error(f"Ошибка в game_dart: {e}")
-        await callback.message.answer("Произошла ошибка, но мы уже работаем над ней.")
+        await callback.message.answer("❌ Ошибка, попробуй позже.")
 
 async def show_game_menu(message: types.Message):
     """Меню после успешной игры"""
