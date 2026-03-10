@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # --- ИНИЦИАЛИЗАЦИЯ БОТА И ДИСПЕТЧЕРА ---
-bot = Bot(token=API_TOKEN, parse_mode="HTML")
+bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
 # --- ОБРАБОТЧИКИ КОМАНД (твоя логика) ---
@@ -95,3 +95,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
 
     uvicorn.run(app, host="0.0.0.0", port=port)
+
