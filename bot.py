@@ -25,7 +25,7 @@ DB_NAME = "users.db"
 # Ссылка на картинку-заглушку (замени на свою)
 PRIZE_IMAGE_URL = "https://via.placeholder.com/400x200.png?text=Gift"
 
-# ID твоего бота (для упоминания в заданиях)
+# Имя твоего бота (для упоминания в заданиях)
 BOT_USERNAME = "CHERRYSPINBOT"  # замени на свой юзернейм без @
 
 # Задания (можно добавлять новые)
@@ -49,7 +49,6 @@ dp = Dispatcher()
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    # Таблица пользователей
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -59,7 +58,6 @@ def init_db():
             total_cases INTEGER DEFAULT 0
         )
     """)
-    # Таблица выполненных заданий
     cur.execute("""
         CREATE TABLE IF NOT EXISTS completed_tasks (
             user_id INTEGER,
@@ -68,7 +66,6 @@ def init_db():
             PRIMARY KEY (user_id, task_id)
         )
     """)
-    # Таблица заданий, ожидающих проверки
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pending_tasks (
             user_id INTEGER PRIMARY KEY,
@@ -118,7 +115,6 @@ def get_top_users(limit=10):
     conn.close()
     return rows
 
-# Функции для работы с заданиями
 def is_task_completed(user_id, task_id):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -206,56 +202,67 @@ async def open_case(callback: CallbackQuery):
     )
     await callback.answer()
 
-# ----- МЕНЮ ИГРЫ -----
+# ----- МЕНЮ "СЫГРАТЬ В ИГРУ" -----
 @dp.callback_query(F.data == "play_game")
 async def play_game_menu(callback: CallbackQuery):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏀 Бросок в кольцо", callback_data="game_hoop")],
-        [InlineKeyboardButton(text="🎯 Метание дротика", callback_data="game_dart")],
-        [InlineKeyboardButton(text="◀ Назад", callback_data="back_to_main")]
-    ])
-    await callback.message.edit_text(
-        "🎯 <b>Выбери игру:</b>\n\n"
-        "Попытай удачу! В случае успеха ты получишь звёзды.",
-        reply_markup=kb
-    )
-    await callback.answer()
+    try:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🏀 Бросок в кольцо", callback_data="game_hoop")],
+            [InlineKeyboardButton(text="🎯 Бросок в цель", callback_data="game_dart")],
+            [InlineKeyboardButton(text="◀ Назад", callback_data="back_to_main")]
+        ])
+        await callback.message.answer(
+            "🎯 <b>Испытайте удачу!</b>\n\n"
+            "Выберите, бросить мяч в кольцо или дротик в цель, чтобы получить приз 😊😍",
+            reply_markup=kb
+        )
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Ошибка в play_game_menu: {e}")
+        await callback.answer("Ошибка, попробуй позже", show_alert=True)
 
 # ----- ОБРАБОТЧИК ИГРЫ (общий) -----
-async def process_game(callback: CallbackQuery, game_name: str, success_chance: float = 0.4):
-    user_id = callback.from_user.id
-    user = get_user(user_id)
+async def process_game(callback: CallbackQuery, game_name: str, success_chance: float):
+    try:
+        user_id = callback.from_user.id
+        user = get_user(user_id)
 
-    if random.random() < success_chance:
-        # Успех
-        prize = random.randint(15, 40)
-        add_balance(user_id, prize)
-        new_balance = user[2] + prize
-        await callback.message.answer(
-            f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n"
-            f"💰 Твой баланс: {new_balance} ⭐."
-        )
-    else:
-        # Промах
-        await callback.message.answer(
-            f"😅 <b>Промах!</b> В этот раз не повезло. Попробуй ещё!"
-        )
+        if random.random() < success_chance:
+            prize = random.randint(20, 50)
+            add_balance(user_id, prize)
+            new_balance = user[2] + prize
+            await callback.message.answer(
+                f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n"
+                f"💰 Твой баланс: {new_balance} ⭐."
+            )
+        else:
+            await callback.message.answer(
+                "😅 <b>К сожалению, вы промахнулись</b>\n\n"
+                "Но мы всё равно можем выдать вам приз за простое задание!\n"
+                "Выберите, что хотите получить:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🎁 Забрать приз за задание", callback_data="tasks_list")]
+                ])
+            )
 
-    # После игры предлагаем действия
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔁 Играть ещё", callback_data="play_game")],
-        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="back_to_main")]
-    ])
-    await callback.message.answer("Выбери действие:", reply_markup=kb)
-    await callback.answer()
+        # Кнопки после игры
+        kb_after = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔁 Играть ещё", callback_data="play_game")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="back_to_main")]
+        ])
+        await callback.message.answer("Выбери действие:", reply_markup=kb_after)
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Ошибка в process_game ({game_name}): {e}")
+        await callback.answer("Ошибка в игре", show_alert=True)
 
 @dp.callback_query(F.data == "game_hoop")
 async def game_hoop(callback: CallbackQuery):
-    await process_game(callback, "Бросок в кольцо", success_chance=0.35)
+    await process_game(callback, "🏀 Бросок в кольцо", success_chance=0.35)
 
 @dp.callback_query(F.data == "game_dart")
 async def game_dart(callback: CallbackQuery):
-    await process_game(callback, "Метание дротика", success_chance=0.45)
+    await process_game(callback, "🎯 Бросок в цель", success_chance=0.45)
 
 # ----- СПИСОК ЗАДАНИЙ -----
 @dp.callback_query(F.data == "tasks_list")
@@ -433,8 +440,3 @@ app = Starlette(
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
-
