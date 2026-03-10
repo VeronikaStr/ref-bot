@@ -8,6 +8,7 @@ import uvicorn
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.client.default import DefaultBotProperties
 
 # --- НАСТРОЙКИ ---
 # Токен будет браться из переменной окружения на Render
@@ -92,4 +93,5 @@ app = Starlette(
 # Точка входа для локального запуска (необязательно, но пригодится для теста)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
+
     uvicorn.run(app, host="0.0.0.0", port=port)
