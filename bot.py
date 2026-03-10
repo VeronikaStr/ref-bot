@@ -185,26 +185,31 @@ async def cmd_start(message: types.Message):
 # ----- ОТКРЫТИЕ КЕЙСА (без изменений) -----
 @dp.callback_query(F.data == "open_case")
 async def open_case(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    user = get_user(user_id)
-    today = date.today().isoformat()
-    last = user[3]
+    try:
+        user_id = callback.from_user.id
+        user = get_user(user_id)
+        today = date.today().isoformat()
+        last = user[3]
 
-    if last == today:
-        await callback.answer("Ты уже открывал кейс сегодня. Приходи завтра!", show_alert=True)
-        return
+        if last == today:
+            await callback.answer("Ты уже открывал кейс сегодня. Приходи завтра!", show_alert=True)
+            return
 
-    prize = random.randint(10, 100)
-    new_balance = user[2] + prize
-    new_total = user[4] + 1
+        prize = random.randint(10, 100)
+        new_balance = user[2] + prize
+        new_total = user[4] + 1
 
-    update_user(user_id, balance=new_balance, last_case_date=today, total_cases=new_total)
+        update_user(user_id, balance=new_balance, last_case_date=today, total_cases=new_total)
 
-    await callback.message.answer(
-        f"🎉 Ты открыл кейс и получил <b>{prize} звёзд</b>!\n"
-        f"💰 Твой баланс: {new_balance} звёзд."
-    )
-    await callback.answer()
+        # Вместо edit_text используем answer + новое сообщение
+        await callback.answer()  # просто закрываем "часики" на кнопке
+        await callback.message.answer(
+            f"🎉 Ты открыл кейс и получил <b>{prize} звёзд</b>!\n"
+            f"💰 Твой баланс: {new_balance} звёзд."
+        )
+    except Exception as e:
+        logger.error(f"Ошибка в open_case: {e}")
+        await callback.answer("Произошла ошибка. Попробуй позже.", show_alert=True)
 
 # ----- СПИСОК ЗАДАНИЙ -----
 @dp.callback_query(F.data == "tasks_list")
@@ -388,3 +393,4 @@ app = Starlette(
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
