@@ -93,6 +93,14 @@ def add_balance(user_id, amount):
     conn.commit()
     conn.close()
 
+def update_user(user_id, **kwargs):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    for key, value in kwargs.items():
+        cur.execute(f"UPDATE users SET {key} = ? WHERE user_id = ?", (value, user_id))
+    conn.commit()
+    conn.close()
+
 def get_top_users(limit=10):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -142,14 +150,13 @@ def mark_task_completed(user_id, task_id):
 
 init_db()
 
-# ----- КОМАНДА /start (ГЛАВНОЕ МЕНЮ) -----
+# ----- ГЛАВНОЕ МЕНЮ (СТАРТ) -----
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = message.from_user.id
     username = message.from_user.username
     get_user(user_id, username)
 
-    # Только Inline-кнопки, никаких Reply-кнопок!
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏀 Бросок в кольцо", callback_data="game_hoop")],
         [InlineKeyboardButton(text="🎯 Бросок в цель", callback_data="game_dart")],
@@ -161,40 +168,60 @@ async def cmd_start(message: types.Message):
         reply_markup=kb
     )
 
-# ----- ОБРАБОТЧИК ИГРЫ -----
-async def process_game(callback: CallbackQuery, game_name: str, success_chance: float):
+# ----- ОБРАБОТЧИКИ ИГР (УПРОЩЁННЫЕ, РАБОЧИЕ) -----
+@dp.callback_query(F.data == "game_hoop")
+async def game_hoop(callback: CallbackQuery):
     try:
         user_id = callback.from_user.id
         user = get_user(user_id)
-
-        if random.random() < success_chance:
+        
+        # Простая логика: 40% успех
+        if random.random() < 0.4:
             prize = random.randint(20, 50)
             add_balance(user_id, prize)
             new_balance = user[2] + prize
-            
-            # Успех — поздравляем и показываем меню
             await callback.message.answer(
                 f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n"
                 f"💰 Твой баланс: {new_balance} ⭐."
             )
             # Показываем меню после игры
-            await show_after_game_menu(callback.message)
+            await show_game_menu(callback.message)
         else:
-            # Промах — предлагаем задание
             await callback.message.answer(
-                "😅 <b>К сожалению, вы промахнулись</b>\n\n"
-                "Но мы всё равно можем выдать вам приз за простое задание!",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="📋 Выбрать задание", callback_data="tasks_list")]
-                ])
+                "😅 <b>Промах!</b> Попробуй ещё раз."
             )
         await callback.answer()
     except Exception as e:
-        logger.error(f"Ошибка в игре: {e}")
-        await callback.answer("Ошибка", show_alert=True)
+        logger.error(f"Ошибка в game_hoop: {e}")
+        await callback.answer("Ошибка, попробуй позже", show_alert=True)
 
-async def show_after_game_menu(message: types.Message):
-    """Меню, которое показывается после успешной игры"""
+@dp.callback_query(F.data == "game_dart")
+async def game_dart(callback: CallbackQuery):
+    try:
+        user_id = callback.from_user.id
+        user = get_user(user_id)
+        
+        # 45% успех
+        if random.random() < 0.45:
+            prize = random.randint(20, 50)
+            add_balance(user_id, prize)
+            new_balance = user[2] + prize
+            await callback.message.answer(
+                f"✅ <b>Попадание!</b> Ты выиграл <b>{prize} ⭐</b>!\n"
+                f"💰 Твой баланс: {new_balance} ⭐."
+            )
+            await show_game_menu(callback.message)
+        else:
+            await callback.message.answer(
+                "😅 <b>Промах!</b> Попробуй ещё раз."
+            )
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Ошибка в game_dart: {e}")
+        await callback.answer("Ошибка, попробуй позже", show_alert=True)
+
+async def show_game_menu(message: types.Message):
+    """Меню после успешной игры"""
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎁 Открыть кейс", callback_data="open_case")],
         [InlineKeyboardButton(text="📋 Задания", callback_data="tasks_list")],
@@ -206,7 +233,6 @@ async def show_after_game_menu(message: types.Message):
 
 @dp.callback_query(F.data == "play_again")
 async def play_again(callback: CallbackQuery):
-    """Возврат к игре"""
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏀 Бросок в кольцо", callback_data="game_hoop")],
         [InlineKeyboardButton(text="🎯 Бросок в цель", callback_data="game_dart")],
@@ -217,14 +243,6 @@ async def play_again(callback: CallbackQuery):
         reply_markup=kb
     )
     await callback.answer()
-
-@dp.callback_query(F.data == "game_hoop")
-async def game_hoop(callback: CallbackQuery):
-    await process_game(callback, "🏀 Бросок в кольцо", success_chance=0.35)
-
-@dp.callback_query(F.data == "game_dart")
-async def game_dart(callback: CallbackQuery):
-    await process_game(callback, "🎯 Бросок в цель", success_chance=0.45)
 
 # ----- ОТКРЫТИЕ КЕЙСА -----
 @dp.callback_query(F.data == "open_case")
@@ -364,7 +382,7 @@ async def leaderboard(callback: CallbackQuery):
 # ----- КНОПКА НАЗАД (в главное меню) -----
 @dp.callback_query(F.data == "back_to_menu")
 async def back_to_menu(callback: CallbackQuery):
-    await show_after_game_menu(callback.message)
+    await show_game_menu(callback.message)
     await callback.answer()
 
 # ----- ВЕБ-СЕРВЕР ДЛЯ RENDER -----
