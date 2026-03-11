@@ -11,7 +11,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import (
     InlineKeyboardMarkup, InlineKeyboardButton,
-    CallbackQuery
+    CallbackQuery, Update
 )
 from aiogram.client.default import DefaultBotProperties
 
@@ -33,11 +33,21 @@ TASKS = {
 }
 # ======================================
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
+
+# ----- ГЛОБАЛЬНЫЙ ЛОГГЕР ВСЕХ ОБНОВЛЕНИЙ -----
+@dp.update.outer_middleware()
+async def log_all_updates(handler, event: Update, data):
+    logger.info(f"📥 Входящее обновление: {event}")
+    # Если это callback_query, логируем его детально
+    if event.callback_query:
+        cq = event.callback_query
+        logger.info(f"   CallbackQuery: data='{cq.data}', user={cq.from_user.id}")
+    return await handler(event, data)
 
 # ----- РАБОТА С БАЗОЙ ДАННЫХ -----
 def init_db():
@@ -168,25 +178,22 @@ async def cmd_start(message: types.Message):
         reply_markup=kb
     )
 
-# ----- ОБРАБОТЧИКИ ИГР С ЛОГАМИ В САМОМ НАЧАЛЕ -----
+# ----- ОБРАБОТЧИКИ ИГР С ЛОГАМИ -----
 @dp.callback_query(F.data == "game_hoop")
 async def game_hoop(callback: CallbackQuery):
-    logger.info(f"🔥 game_hoop callback получен от пользователя {callback.from_user.id}")
-    await callback.answer("✅ Кнопка сработала!")  # это уведомление появится вверху экрана
-    # Отправляем простое сообщение для теста
-    await callback.message.answer("🏀 Тест: игра 'Бросок в кольцо' работает!")
-    # Показываем меню после игры
+    logger.info(f"🔥 Обработчик game_hoop: data={callback.data}, user={callback.from_user.id}")
+    await callback.answer("✅ Попытка!")
+    await callback.message.answer("🏀 Игра 'Бросок в кольцо' запущена!")
     await show_game_menu(callback.message)
 
 @dp.callback_query(F.data == "game_dart")
 async def game_dart(callback: CallbackQuery):
-    logger.info(f"🔥 game_dart callback получен от пользователя {callback.from_user.id}")
-    await callback.answer("✅ Кнопка сработала!")
-    await callback.message.answer("🎯 Тест: игра 'Бросок в цель' работает!")
+    logger.info(f"🔥 Обработчик game_dart: data={callback.data}, user={callback.from_user.id}")
+    await callback.answer("✅ Попытка!")
+    await callback.message.answer("🎯 Игра 'Бросок в цель' запущена!")
     await show_game_menu(callback.message)
 
 async def show_game_menu(message: types.Message):
-    """Меню после игры"""
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎁 Открыть кейс", callback_data="open_case")],
         [InlineKeyboardButton(text="📋 Задания", callback_data="tasks_list")],
@@ -198,7 +205,7 @@ async def show_game_menu(message: types.Message):
 
 @dp.callback_query(F.data == "play_again")
 async def play_again(callback: CallbackQuery):
-    logger.info(f"play_again callback получен от {callback.from_user.id}")
+    logger.info(f"Обработчик play_again: data={callback.data}")
     await callback.answer()
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏀 Бросок в кольцо", callback_data="game_hoop")],
@@ -213,7 +220,7 @@ async def play_again(callback: CallbackQuery):
 # ----- ОТКРЫТИЕ КЕЙСА -----
 @dp.callback_query(F.data == "open_case")
 async def open_case(callback: CallbackQuery):
-    logger.info(f"open_case callback получен от {callback.from_user.id}")
+    logger.info(f"Обработчик open_case: data={callback.data}")
     await callback.answer()
     user_id = callback.from_user.id
     user = get_user(user_id)
@@ -236,7 +243,7 @@ async def open_case(callback: CallbackQuery):
 # ----- ЗАДАНИЯ -----
 @dp.callback_query(F.data == "tasks_list")
 async def tasks_list(callback: CallbackQuery):
-    logger.info(f"tasks_list callback получен от {callback.from_user.id}")
+    logger.info(f"Обработчик tasks_list: data={callback.data}")
     await callback.answer()
     user_id = callback.from_user.id
     kb_buttons = []
@@ -254,7 +261,7 @@ async def tasks_list(callback: CallbackQuery):
 
 @dp.callback_query(F.data.startswith("task_"))
 async def task_detail(callback: CallbackQuery):
-    logger.info(f"task_detail callback получен от {callback.from_user.id}, data={callback.data}")
+    logger.info(f"Обработчик task_detail: data={callback.data}")
     await callback.answer()
     task_id = callback.data.replace("task_", "")
     task = TASKS.get(task_id)
@@ -277,7 +284,7 @@ async def task_detail(callback: CallbackQuery):
 
 @dp.callback_query(F.data.startswith("done_"))
 async def task_done(callback: CallbackQuery):
-    logger.info(f"task_done callback получен от {callback.from_user.id}, data={callback.data}")
+    logger.info(f"Обработчик task_done: data={callback.data}")
     await callback.answer()
     task_id = callback.data.replace("done_", "")
     task = TASKS.get(task_id)
@@ -325,7 +332,7 @@ async def handle_screenshot(message: types.Message):
 # ----- БАЛАНС -----
 @dp.callback_query(F.data == "balance")
 async def show_balance(callback: CallbackQuery):
-    logger.info(f"balance callback получен от {callback.from_user.id}")
+    logger.info(f"Обработчик balance: data={callback.data}")
     await callback.answer()
     user = get_user(callback.from_user.id)
     await callback.message.edit_text(
@@ -338,7 +345,7 @@ async def show_balance(callback: CallbackQuery):
 # ----- ЛИДЕРБОРД -----
 @dp.callback_query(F.data == "leaderboard")
 async def leaderboard(callback: CallbackQuery):
-    logger.info(f"leaderboard callback получен от {callback.from_user.id}")
+    logger.info(f"Обработчик leaderboard: data={callback.data}")
     await callback.answer()
     top = get_top_users(10)
     if not top:
@@ -352,10 +359,10 @@ async def leaderboard(callback: CallbackQuery):
         [InlineKeyboardButton(text="◀ Назад", callback_data="back_to_menu")]
     ]))
 
-# ----- КНОПКА НАЗАД (в меню после игры) -----
+# ----- КНОПКА НАЗАД -----
 @dp.callback_query(F.data == "back_to_menu")
 async def back_to_menu(callback: CallbackQuery):
-    logger.info(f"back_to_menu callback получен от {callback.from_user.id}")
+    logger.info(f"Обработчик back_to_menu: data={callback.data}")
     await callback.answer()
     await show_game_menu(callback.message)
 
