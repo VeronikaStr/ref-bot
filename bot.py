@@ -243,11 +243,11 @@ async def cmd_start(message: types.Message):
 async def game_hoop(callback: CallbackQuery):
     try:
         logger.info(f"🔥 game_hoop callback от {callback.from_user.id}")
-        await callback.answer()  # сразу убираем "часики"
+        await callback.answer()
         user_id = callback.from_user.id
         user = get_user(user_id)
 
-        if random.random() < 0.4:  # 40% успех
+        if random.random() < 0.4:
             prize = random.randint(20, 50)
             add_balance(user_id, prize)
             new_balance = user[2] + prize
@@ -272,7 +272,7 @@ async def game_dart(callback: CallbackQuery):
         user_id = callback.from_user.id
         user = get_user(user_id)
 
-        if random.random() < 0.45:  # 45% успех
+        if random.random() < 0.45:
             prize = random.randint(20, 50)
             add_balance(user_id, prize)
             new_balance = user[2] + prize
@@ -290,7 +290,6 @@ async def game_dart(callback: CallbackQuery):
         await callback.message.answer("Ошибка в игре. Попробуйте ещё раз.")
 
 async def show_game_menu(message: types.Message):
-    """Меню после успешной игры"""
     try:
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🎁 Открыть кейс", callback_data="open_case")],
@@ -519,11 +518,22 @@ async def startup():
         if not webhook_url:
             logger.error("❌ RENDER_EXTERNAL_URL не задан!")
             return
-        await bot.set_webhook(
-            f"{webhook_url}/webhook",
-            allowed_updates=["message", "callback_query"]
-        )
-        logger.info(f"✅ Вебхук установлен на {webhook_url}/webhook (разрешены message и callback_query)")
+
+        # Получаем информацию о текущем вебхуке
+        webhook_info = await bot.get_webhook_info()
+        current_url = webhook_info.url
+        expected_url = f"{webhook_url}/webhook"
+
+        if current_url != expected_url:
+            logger.info(f"🔄 Вебхук не совпадает (текущий: {current_url}, ожидаемый: {expected_url}), переустанавливаю...")
+            await bot.set_webhook(
+                expected_url,
+                allowed_updates=["message", "callback_query"]
+            )
+            logger.info(f"✅ Вебхук установлен на {expected_url} (разрешены message и callback_query)")
+        else:
+            logger.info(f"✅ Вебхук уже корректен: {current_url}")
+
         logger.info("✅ startup() завершён")
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка в startup: {e}", exc_info=True)
