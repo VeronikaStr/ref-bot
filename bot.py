@@ -1,25 +1,4 @@
-
-
-    # ============================================================
-    # CHERRY SPIN BOT — FULL VERSION
-    # Telegram Game Bot with:
-    # - Basketball game (🏀 animation)
-    # - Dart game (🎯 animation)
-    # - Wheel of fortune 🎡
-    # - Daily bonus 💰
-    # - Case opening 🎁
-    # - Referral system 👥
-    # - Leaderboard 🏆
-    # - Balance system ⭐
-    # - SQLite database
-    # - Webhook support (Render / VPS)
-    #
-    # Framework: aiogram v3
-    # Web server: Starlette + Uvicorn
-    # ============================================================
-
-    import os
-    import random
+import random
     import sqlite3
     import logging
     from datetime import date
