@@ -1,24 +1,24 @@
 import random
-    import sqlite3
-    import logging
-    from datetime import date
-    from starlette.applications import Starlette
-    from starlette.responses import PlainTextResponse, Response
-    from starlette.routing import Route
-    import uvicorn
+import sqlite3
+import logging
+from datetime import date
+from starlette.applications import Starlette
+from starlette.responses import PlainTextResponse, Response
+from starlette.routing import Route
+import uvicorn
 
-    from aiogram import Bot, Dispatcher, types, F
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-    from aiogram.filters import Command
-    from aiogram.client.default import DefaultBotProperties
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.filters import Command
+from aiogram.client.default import DefaultBotProperties
 
-    # ================= SETTINGS =================
+# ================= SETTINGS =================
 
-    API_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+API_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 
-    BOT_USERNAME = "CHERRYSPINBOT"
+BOT_USERNAME = "CHERRYSPINBOT"
 
-    DB_NAME = "cherry_spin.db"
+DB_NAME = "cherry_spin.db"
 
     logging.basicConfig(level=logging.INFO)
 
