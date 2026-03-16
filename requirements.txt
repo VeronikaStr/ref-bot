@@ -1,11 +1,4 @@
-# Telegram bot framework
 aiogram==3.1.0
-
-# ASGI server
 uvicorn==0.23.2
-
-# Web framework for aiogram (Webhook support, но для long-polling тоже нужно)
 starlette==0.27.2
-
-# Для работы с .env файлами (опционально)
 python-dotenv==1.0.1
