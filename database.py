@@ -1,11 +1,25 @@
 import asyncpg
+import logging
 from config import DATABASE_URL
 
-pool=None
+pool = None
 
 async def connect():
     global pool
     pool = await asyncpg.create_pool(DATABASE_URL)
+    # Создаём таблицу, если её нет
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS users(
+                user_id BIGINT PRIMARY KEY,
+                balance INT DEFAULT 0,
+                exp INT DEFAULT 0,
+                level INT DEFAULT 1
+            )
+        """)
+    logging.info("✅ Таблица users проверена/создана")
+
+# Остальные функции (add_balance, get_user и т.д.) остаются без изменений
 
 async def create_user(user_id):
 
