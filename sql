@@ -1,0 +1,6 @@
+CREATE TABLE users(
+user_id BIGINT PRIMARY KEY,
+balance INT DEFAULT 0,
+exp INT DEFAULT 0,
+level INT DEFAULT 1
+);
