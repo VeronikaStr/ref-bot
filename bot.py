@@ -1,55 +1,53 @@
+# bot.py
 import os
 import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import BotCommand
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 from aiohttp import web
 
-# ====== Настройки через переменные окружения ======
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-WEBHOOK_PATH = os.environ.get("WEBHOOK_PATH", "/webhook")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}{WEBHOOK_PATH}")
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
 
-logging.basicConfig(level=LOG_LEVEL)
+logging.basicConfig(level=logging.INFO)
 
-# ====== Создаем бота и диспетчера ======
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
+# ==== Настройки бота ====
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")  # ставь токен через Render Environment
+WEBHOOK_PATH = f"/webhook/{TOKEN}"
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")  # https://your-app.onrender.com
+PORT = int(os.environ.get("PORT", 10000))
+
+bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# ====== Команды бота ======
-async def set_commands(bot: Bot):
-    await bot.set_my_commands([
-        BotCommand(command="/start", description="Запустить бота"),
-        BotCommand(command="/help", description="Помощь")
-    ])
-
-# ====== Обработчик команды /start ======
-@dp.message(commands=["start"])
+# ==== Обработчики команд ====
+@dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я работаю через Render + webhook 🚀")
+    await message.answer("Привет! Бот успешно запущен 🚀")
 
-# ====== Webhook ======
+@dp.message(Command("help"))
+async def cmd_help(message: types.Message):
+    await message.answer("Доступные команды:\n/start\n/help")
+
+# ==== Вебхук сервер для Render ====
 async def handle(request: web.Request):
     update = types.Update(**await request.json())
     await dp.process_update(update)
     return web.Response(text="ok")
 
-# ====== Запуск сервера ======
-async def on_startup(app):
-    await set_commands(bot)
-    await bot.delete_webhook()
-    await bot.set_webhook(WEBHOOK_URL)
+async def on_startup(app: web.Application):
+    # Устанавливаем вебхук
+    await bot.delete_webhook(drop_pending_updates=True)
+    await bot.set_webhook(WEBHOOK_URL + WEBHOOK_PATH)
+    logging.info("Webhook установлен")
 
-async def on_shutdown(app):
-    await bot.delete_webhook()
+async def on_shutdown(app: web.Application):
+    logging.warning("Shutting down..")
     await bot.session.close()
+    logging.warning("Bye!")
 
+# ==== Запуск веб-сервера ====
 app = web.Application()
 app.router.add_post(WEBHOOK_PATH, handle)
 app.on_startup.append(on_startup)
-app.on_cleanup.append(on_shutdown)
+app.on_shutdown.append(on_shutdown)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    web.run_app(app, host="0.0.0.0", port=port)
+    web.run_app(app, host="0.0.0.0", port=PORT)
