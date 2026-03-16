@@ -46,6 +46,10 @@ async def on_shutdown(app: web.Application):
 # ==== Запуск веб-сервера ====
 app = web.Application()
 app.router.add_post(WEBHOOK_PATH, handle)
+async def healthcheck(request):
+    return web.Response(text="OK")
+
+app.router.add_get("/healthcheck", healthcheck)
 app.on_startup.append(on_startup)
 app.on_shutdown.append(on_shutdown)
 
