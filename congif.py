@@ -1,21 +1,13 @@
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# Токен бота из BotFather
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "тут_твой_токен")
 
-# Telegram bot token
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# Путь webhook (любой, уникальный)
+WEBHOOK_PATH = os.environ.get("WEBHOOK_PATH", "/webhook")
 
-# Database
-DATABASE_PATH = os.getenv("DATABASE_PATH", "cherryspin.db")
+# Полный URL для webhook (домен Render + путь)
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}{WEBHOOK_PATH}")
 
-# Webhook settings
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "https://your-render-url.onrender.com")
-WEBHOOK_PATH = f"/webhook/{TELEGRAM_BOT_TOKEN}"
-WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
-
-# Admins
-ADMINS = [int(x) for x in os.getenv("ADMINS", "").split(",") if x]
-
-# Logging
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+# Уровень логирования
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
