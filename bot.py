@@ -38,7 +38,8 @@ async def shutdown(app):
 app=web.Application()
 
 app.router.add_post(WEBHOOK_PATH,handle)
-
+# НОВЫЙ маршрут для healthcheck
+app.router.add_get("/healthcheck", lambda request: web.Response(text="OK"))
 app.on_startup.append(startup)
 app.on_shutdown.append(shutdown)
 
