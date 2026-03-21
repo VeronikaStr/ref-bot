@@ -1,1 +1,1 @@
-from . import start, games, quests, admin
+from . import start, games, quests, admin, economy
