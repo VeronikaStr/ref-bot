@@ -1,12 +1,13 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
-from database import get_user
+from database import get_user, create_user  # добавили create_user
 
 router = Router()
 
 @router.callback_query(F.data == "profile")
 async def profile_callback(callback: CallbackQuery):
     user_id = callback.from_user.id
+    await create_user(user_id)  # гарантируем, что пользователь существует
     user = await get_user(user_id)
     if user:
         balance = user['balance']
