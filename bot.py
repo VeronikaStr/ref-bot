@@ -5,7 +5,7 @@ from aiogram import Bot,Dispatcher,types
 from config import TOKEN,WEBHOOK_URL,WEBHOOK_PATH,PORT
 from database import connect
 
-from handlers import start,games,quests,admin
+from handlers import start, games, quests, admin, economy
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,6 +16,7 @@ dp.include_router(start.router)
 dp.include_router(games.router)
 dp.include_router(quests.router)
 dp.include_router(admin.router)
+dp.include_router(economy.router)
 
 async def handle(request):
 
