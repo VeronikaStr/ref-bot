@@ -22,15 +22,13 @@ async def connect():
 # Остальные функции (add_balance, get_user и т.д.) остаются без изменений
 
 async def create_user(user_id):
-
     async with pool.acquire() as conn:
-
         await conn.execute("""
-        INSERT INTO users(user_id,balance,exp,level)
-        VALUES($1,100,0,1)
-        ON CONFLICT DO NOTHING
-        """,user_id)
-
+            INSERT INTO users (user_id, balance, exp, level)
+            VALUES ($1, 100, 0, 1)
+            ON CONFLICT (user_id) DO NOTHING
+        """, user_id)
+        
 async def add_balance(user,amount):
 
     async with pool.acquire() as conn:
